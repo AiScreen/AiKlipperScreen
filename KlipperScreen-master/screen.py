@@ -82,7 +82,7 @@ class KlipperScreen(Gtk.Window):
     panels = {}
     popup_message = None
     screensaver = None
-    printers = printer = None
+    printer = None
     subscriptions = []
     updating = False
     _ws = None
@@ -122,8 +122,7 @@ class KlipperScreen(Gtk.Window):
         self.set_resizable(True)
         if not (self._config.get_main_config().get("width") or self._config.get_main_config().get("height")):
             self.fullscreen()
-        self.aspect_ratio = self.width / self.height
-        self.vertical_mode = self.aspect_ratio < 1.0
+        self.vertical_mode = self.width < self.height
         logging.info(f"Screen resolution: {self.width}x{self.height}")
         self.theme = self._config.get_main_config().get('theme')
         self.show_cursor = self._config.get_main_config().getboolean("show_cursor", fallback=False)
@@ -152,24 +151,13 @@ class KlipperScreen(Gtk.Window):
         self.initial_connection()
 
     def initial_connection(self):
-        self.printers = self._config.get_printers()
-        state_callbacks = {
-            "disconnected": self.state_disconnected,
-            "error": self.state_error,
-            "paused": self.state_paused,
-            "printing": self.state_printing,
-            "ready": self.state_ready,
-            "startup": self.state_startup,
-            "shutdown": self.state_shutdown
-        }
-        for printer in self.printers:
-            printer["data"] = Printer(state_execute, state_callbacks, self.process_busy_state)
+        printers = self._config.get_printers()
         default_printer = self._config.get_main_config().get('default_printer')
         logging.debug(f"Default printer: {default_printer}")
-        if [True for p in self.printers if default_printer in p]:
+        if [True for p in printers if default_printer in p]:
             self.connect_printer(default_printer)
-        elif len(self.printers) == 1:
-            pname = list(self.printers[0])[0]
+        elif len(printers) == 1:
+            pname = list(printers[0])[0]
             self.connect_printer(pname)
         else:
             self.base_panel.show_printer_select(True)
@@ -180,27 +168,40 @@ class KlipperScreen(Gtk.Window):
         if self._ws is not None and self._ws.connected:
             self._ws.close()
             self.connected_printer = None
-            self.printer.state = "disconnected"
             if self.files:
                 self.files.reset()
                 self.files = None
-
+            if self.printer:
+                self.printer.reset()
+                self.printer = None
         self.connecting = True
         self.initialized = False
+        data = {
+            "moonraker_host": "127.0.0.1",
+            "moonraker_port": "7125",
+            "moonraker_api_key": False
+        }
 
         logging.info(f"Connecting to printer: {name}")
-        for printer in self.printers:
-            if name == list(printer)[0]:
-                ind = self.printers.index(printer)
-                break
+        for printer in self._config.get_printers():
+            pname = list(printer)[0]
+            if pname != name:
+                continue
+            data = printer[pname]
+            break
 
-        self.printer = self.printers[ind]["data"]
-        self.apiclient = KlippyRest(
-            self.printers[ind][name]["moonraker_host"],
-            self.printers[ind][name]["moonraker_port"],
-            self.printers[ind][name]["moonraker_api_key"],
-        )
-
+        self.apiclient = KlippyRest(data["moonraker_host"], data["moonraker_port"], data["moonraker_api_key"])
+        self.printer = Printer(state_execute)
+        self.printer.state_callbacks = {
+            "disconnected": self.state_disconnected,
+            "error": self.state_error,
+            "paused": self.state_paused,
+            "printing": self.state_printing,
+            "ready": self.state_ready,
+            "startup": self.state_startup,
+            "shutdown": self.state_shutdown
+        }
+        self.printer.busy_cb = self.process_busy_state
         self.printer_initializing(_("Connecting to %s") % name, remove=True)
 
         self._ws = KlippyWebsocket(self,
@@ -209,8 +210,8 @@ class KlipperScreen(Gtk.Window):
                                        "on_message": self._websocket_callback,
                                        "on_close": self.websocket_disconnected
                                    },
-                                   self.printers[ind][name]["moonraker_host"],
-                                   self.printers[ind][name]["moonraker_port"],
+                                   data["moonraker_host"],
+                                   data["moonraker_port"]
                                    )
 
         self.files = KlippyFiles(self)
@@ -626,6 +627,8 @@ class KlipperScreen(Gtk.Window):
         self.connected_printer = None
         self.files.reset()
         self.files = None
+        self.printer.reset()
+        self.printer = None
         self.initialized = False
         self.connect_printer(self.connecting_to_printer)
 
@@ -963,13 +966,9 @@ class KlipperScreen(Gtk.Window):
 
     def update_size(self, *args):
         self.width, self.height = self.get_size()
-        new_ratio = self.width / self.height
-        new_mode = new_ratio < 1.0
-        ratio_delta = abs(self.aspect_ratio - new_ratio)
-        if ratio_delta > 0.1 and self.vertical_mode != new_mode:
+        if self.vertical_mode != (self.width < self.height):
             self.reload_panels()
-            self.vertical_mode = new_mode
-            self.aspect_ratio = new_ratio
+            self.vertical_mode = self.width < self.height
 
 
 def main():

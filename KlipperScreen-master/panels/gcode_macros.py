@@ -83,12 +83,7 @@ class MacroPanel(ScreenPanel):
             "params": {},
         }
         pattern = r'params\.(?P<param>..*)\|default\((?P<default>..*)\).*'
-        gcode = self._printer.get_macro(macro)
-        if gcode and "gcode" in gcode:
-            gcode = gcode["gcode"].split("\n")
-        else:
-            logging.debug(f"Couldn't load {macro}\n{gcode}")
-            return
+        gcode = self._printer.get_config_section(f"gcode_macro {macro}")["gcode"].split("\n")
         i = 0
         for line in gcode:
             if line.startswith("{") and "params." in line:

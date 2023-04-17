@@ -7,12 +7,12 @@ from gi.repository import GLib
 
 
 class Printer:
-    def __init__(self, state_cb, state_callbacks, busy_cb):
-        self.config = {}
-        self.data = {}
+    def __init__(self, state_cb):
+        self.config = None
+        self.data = None
         self.state = "disconnected"
         self.state_cb = state_cb
-        self.state_callbacks = state_callbacks
+        self.state_callbacks = None
         self.devices = {}
         self.power_devices = {}
         self.tools = []
@@ -22,9 +22,28 @@ class Printer:
         self.output_pin_count = 0
         self.store_timeout = None
         self.tempstore = {}
-        self.busy_cb = busy_cb
-        self.busy = False
-        self.tempstore_size = 1200
+        self.busy_cb = None
+        self.busy = None
+        self.temperature_store_size = None
+
+    def reset(self):
+        self.config = None
+        self.data = None
+        self.state = None
+        self.state_cb = None
+        self.state_callbacks = None
+        self.devices = None
+        self.power_devices = None
+        self.tools = None
+        self.extrudercount = None
+        self.tempdevcount = None
+        self.fancount = None
+        self.output_pin_count = None
+        self.store_timeout = None
+        self.tempstore = None
+        self.busy_cb = None
+        self.busy = None
+        self.temperature_store_size = None
 
     def reinit(self, printer_info, data):
         self.config = data['configfile']['config']
@@ -73,15 +92,6 @@ class Printer:
                     self.fancount += 1
             if x.startswith('output_pin ') and not x.split()[1].startswith("_"):
                 self.output_pin_count += 1
-            if x.startswith('bed_mesh '):
-                r = self.config[x]
-                r['x_count'] = int(r['x_count'])
-                r['y_count'] = int(r['y_count'])
-                r['max_x'] = float(r['max_x'])
-                r['min_x'] = float(r['min_x'])
-                r['max_y'] = float(r['max_y'])
-                r['min_y'] = float(r['min_y'])
-                r['points'] = [[float(j.strip()) for j in i.split(",")] for i in r['points'].strip().split("\n")]
         self.process_update(data)
 
         logging.info(f"Klipper version: {printer_info['software_version']}")
@@ -163,16 +173,6 @@ class Printer:
 
     def get_config_section(self, section):
         return self.config[section] if section in self.config else False
-
-    def get_macro(self, macro):
-        return next(
-            (
-                self.config[key]
-                for key in self.config.keys()
-                if key.find(macro) > -1
-            ),
-            False,
-        )
 
     def get_fans(self):
         fans = []

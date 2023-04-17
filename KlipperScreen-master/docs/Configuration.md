@@ -24,14 +24,14 @@ job_complete_timeout: 0
 job_error_timeout: 0
 
 # Allows the cursor to be displayed on the screen
-show_cursor: True
+show_cursor: False
 
 # If multiple printers are defined, this can be set the name of the one to show at startup.
 default_printer: Ender 3 Pro
 
 # To define a full set of custom menues (instead of merging user entries with default entries)
 # set this to False. See Menu section below.
-use_default_menu: True
+use_default_menu: False
 
 # Define one or more moonraker power devices that turn on/off with the screensaver (CSV list)
 screen_on_devices: example1, example2
@@ -79,7 +79,7 @@ calibrate_y_position: 100
 
 # Bed Screws
 # define the screw positons required for odd number of screws in a comma separated list
-# possible values are: bl, br, bm, fl, fr, fm, lm, rm, center
+# possible values are: bl, br, bm, fl, fr, fm, lm, rm
 # they correspond to back-left, back-right, back-middle, front-left, front-right, front-middle, left-middle, right-middle
 screw_positions: ""
 

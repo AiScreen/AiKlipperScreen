@@ -25,11 +25,6 @@ class MenuPanel(ScreenPanel):
         self.grid = self._gtk.HomogeneousGrid()
 
     def initialize(self, items):
-        for item in items:
-            key = next(iter(item))
-            if not self.evaluate_enable(item[key]['enable']):
-                logging.debug(f"X > {key}")
-                items.remove(item)
         self.items = items
         self.create_menu_items()
         scroll = self._gtk.ScrolledWindow()
@@ -48,8 +43,12 @@ class MenuPanel(ScreenPanel):
             self.grid.remove(child)
 
         length = len(items)
-        for i, item in enumerate(items):
+        i = 0
+        for item in items:
             key = list(item)[0]
+            if not self.evaluate_enable(item[key]['enable']):
+                logging.debug(f"X > {key}")
+                continue
 
             if columns == 4:
                 if length <= 4:
@@ -67,7 +66,8 @@ class MenuPanel(ScreenPanel):
                 width = 2
 
             self.grid.attach(self.labels[key], col, row, width, height)
-        self.j2_data = None
+            i += 1
+
         return self.grid
 
     def create_menu_items(self):
@@ -81,10 +81,10 @@ class MenuPanel(ScreenPanel):
             printer = self._printer.get_printer_status_data()
 
             name = env.from_string(item['name']).render(printer)
-            icon = env.from_string(item['icon']).render(printer) if item['icon'] else None
+            icon = env.from_string(item['icon']).render(printer)
             style = env.from_string(item['style']).render(printer) if item['style'] else None
 
-            b = self._gtk.Button(icon, name, style or f"color{i % 4 + 1}")
+            b = self._gtk.Button(icon, name, (style if style else f"color{(i % 4) + 1}"))
 
             if item['panel'] is not None:
                 panel = env.from_string(item['panel']).render(printer)
