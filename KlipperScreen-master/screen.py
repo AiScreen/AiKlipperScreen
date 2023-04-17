@@ -116,12 +116,32 @@ class KlipperScreen(Gtk.Window):
             monitor = Gdk.Display.get_default().get_monitor(0)
         if monitor is None:
             raise RuntimeError("Couldn't get default monitor")
-        self.width = self._config.get_main_config().getint("width", monitor.get_geometry().width)
-        self.height = self._config.get_main_config().getint("height", monitor.get_geometry().height)
-        self.set_default_size(self.width, self.height)
-        self.set_resizable(True)
-        if not (self._config.get_main_config().get("width") or self._config.get_main_config().get("height")):
-            self.fullscreen()
+        
+        #---------------------------------------------------------------------
+        #If you want to view in full screen, use the True.
+
+        # Set for Screen Size
+        full_sreen = True     # True or False
+
+        if full_sreen == True:
+                    
+                    self.width = self._config.get_main_config().getint("width", monitor.get_geometry().width)
+                    self.height = self._config.get_main_config().getint("height", monitor.get_geometry().height)
+                    self.set_default_size(self.width, self.height)
+                    self.set_resizable(True)
+                    if not (self._config.get_main_config().get("width") or self._config.get_main_config().get("height")):
+                        self.fullscreen()
+
+        elif full_sreen == False:
+                    
+                    self.width = 800
+                    self.height = 444
+                    self.set_default_size(self.width, self.height)
+                    self.set_resizable(True)
+
+        #---------------------------------------------------------------------
+
+
         self.vertical_mode = self.width < self.height
         logging.info(f"Screen resolution: {self.width}x{self.height}")
         self.theme = self._config.get_main_config().get('theme')
